@@ -111,6 +111,9 @@ err_t            tcp_process_refused_data(struct tcp_pcb *pcb);
 #define TCP_SEQ_GT(a,b)     TCP_SEQ_LT(b,a)
 #define TCP_SEQ_GEQ(a,b)    TCP_SEQ_LEQ(b,a)
 /* is b<=a<=c? */
+#if 0 /* see bug #10548 */
+#define TCP_SEQ_BETWEEN(a,b,c) ((c)-(b) >= (a)-(b))
+#endif
 #define TCP_SEQ_BETWEEN(a,b,c) (TCP_SEQ_GEQ(a,b) && TCP_SEQ_LEQ(a,c))
 
 #ifndef TCP_TMR_INTERVAL
@@ -150,6 +153,10 @@ err_t            tcp_process_refused_data(struct tcp_pcb *pcb);
 #define  TCP_MAXIDLE              TCP_KEEPCNT_DEFAULT * TCP_KEEPINTVL_DEFAULT  /* Maximum KEEPALIVE probe time */
 
 #define TCP_TCPLEN(seg) ((seg)->len + (((TCPH_FLAGS((seg)->tcphdr) & (TCP_FIN | TCP_SYN)) != 0) ? 1U : 0U))
+
+/* Syncookie secret size is chosen so that the size of the data on which the hash is calculated is a
+ * multiple of the block size of the hash function. */
+#define TCP_SYNCOOKIE_SECRET_SIZE   36
 
 /** Flags used on input processing, not on pcb->flags
 */
@@ -323,6 +330,7 @@ struct tcp_seg {
 extern struct tcp_pcb *tcp_input_pcb;
 extern u32_t tcp_ticks;
 extern u8_t tcp_active_pcbs_changed;
+extern u8_t tcp_syncookie_secret[TCP_SYNCOOKIE_SECRET_SIZE];
 
 /* The TCP PCB lists. */
 union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
@@ -466,6 +474,9 @@ void tcp_rst(const struct tcp_pcb* pcb, u32_t seqno, u32_t ackno,
        u16_t local_port, u16_t remote_port);
 void tcp_rst_netif(struct netif *netif, u32_t seqno, u32_t ackno,
                    const ip_addr_t *local_ip, const ip_addr_t *remote_ip,
+       u16_t local_port, u16_t remote_port);
+void tcp_synack(const struct tcp_pcb_listen *pcb, u32_t seqno, u32_t ackno,
+       const ip_addr_t *local_ip, const ip_addr_t *remote_ip,
                    u16_t local_port, u16_t remote_port);
 
 u32_t tcp_next_iss(struct tcp_pcb *pcb);
